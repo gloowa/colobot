@@ -273,6 +273,15 @@ inline float Distance(const Math::Vector &a, const Math::Vector &b)
                   (a.z-b.z)*(a.z-b.z) );
 }
 
+
+
+//! Returns the distance between the ends of two vectors ignoring height
+inline float Distance2d(const Math::Vector &a, const Math::Vector &b)
+{
+    return sqrtf( (a.x-b.x)*(a.x-b.x) +
+                  (a.z-b.z)*(a.z-b.z));
+}
+
 //! Clamps the vector \a vec to range between \a min and \a max
 inline Vector Clamp(const Vector &vec, const Vector &min, const Vector &max)
 {

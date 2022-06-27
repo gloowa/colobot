@@ -296,6 +296,7 @@ public:
     void        ChangeColor();
 
     bool        FreeSpace(Math::Vector &center, float minRadius, float maxRadius, float space, CObject *exclu);
+    bool        FreeSpace2d(Math::Vector &center, float minRadius, float maxRadius, float space, CObject *exclu);
     bool        FlatFreeSpace(Math::Vector &center, float minFlat, float minRadius, float maxRadius, float space, CObject *exclu);
     //! \name In-world indicators
     //@{

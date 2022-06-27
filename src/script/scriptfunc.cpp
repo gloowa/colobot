@@ -1819,7 +1819,7 @@ bool CScriptFunctions::rSpace(CBotVar* var, CBotVar* result, int& exception, voi
             }
         }
     }
-    script->m_main->FreeSpace(center, rMin, rMax, dist, pThis);
+    script->m_main->FreeSpace2d(center, rMin, rMax, dist, pThis);
 
     if ( result != nullptr )
     {

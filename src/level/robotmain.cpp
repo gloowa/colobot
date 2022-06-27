@@ -4118,6 +4118,58 @@ float SearchNearestObject(CObjectManager* objMan, Math::Vector center, CObject* 
 }
 }
 
+//! Calculates the distance to the nearest object
+namespace
+{
+float SearchNearestObject2d(CObjectManager* objMan, Math::Vector center, CObject* exclu)
+{
+    float min = 100000.0f;
+    for (CObject* obj : objMan->GetAllObjects())
+    {
+        if (!obj->GetDetectable()) continue;  // inactive?
+        if (IsObjectBeingTransported(obj)) continue;
+
+        if (obj == exclu) continue;
+
+        ObjectType type = obj->GetType();
+
+        if (type == OBJECT_BASE)
+        {
+            Math::Vector oPos = obj->GetPosition();
+            if (oPos.x != center.x ||
+                oPos.z != center.z)
+            {
+                float dist = Math::Distance2d(center, oPos);
+                if (dist < 0.0f) dist = 0.0f;
+                min = Math::Min(min, dist);
+                continue;
+            }
+        }
+
+        if (type == OBJECT_STATION ||
+            type == OBJECT_REPAIR ||
+            type == OBJECT_DESTROYER)
+        {
+            Math::Vector oPos = obj->GetPosition();
+            float dist = Math::Distance2d(center, oPos) - 8.0f;
+            if (dist < 0.0f) dist = 0.0f;
+            min = Math::Min(min, dist);
+        }
+
+        for (const auto &crashSphere : obj->GetAllCrashSpheres())
+        {
+            Math::Vector oPos = crashSphere.sphere.pos;
+            float oRadius = crashSphere.sphere.radius;
+
+            float dist = Math::Distance2d(center, oPos) - oRadius;
+            if (dist < 0.0f) dist = 0.0f;
+            min = Math::Min(min, dist);
+        }
+    }
+    return min;
+}
+}
+
 //! Calculates a free space
 bool CRobotMain::FreeSpace(Math::Vector &center, float minRadius, float maxRadius,
                            float space, CObject *exclu)
@@ -4139,6 +4191,72 @@ bool CRobotMain::FreeSpace(Math::Vector &center, float minRadius, float maxRadiu
                 pos.y = 0.0f;
                 m_terrain->AdjustToFloor(pos, true);
                 float dist = SearchNearestObject(m_objMan.get(), pos, exclu);
+                if (dist >= space)
+                {
+                    float flat = m_terrain->GetFlatZoneRadius(pos, dist/2.0f);
+                    if (flat >= dist/2.0f)
+                    {
+                        center = pos;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    else    // from external to internal?
+    {
+        for (float radius=maxRadius; radius >= minRadius; radius -= space)
+        {
+            float ia = space/radius;
+            for (float angle=0.0f ; angle<Math::PI*2.0f ; angle+=ia )
+            {
+                Math::Point p;
+                p.x = center.x+radius;
+                p.y = center.z;
+                p = Math::RotatePoint(Math::Point(center.x, center.z), angle, p);
+                Math::Vector pos;
+                pos.x = p.x;
+                pos.z = p.y;
+                pos.y = 0.0f;
+                m_terrain->AdjustToFloor(pos, true);
+                float dist = SearchNearestObject(m_objMan.get(), pos, exclu);
+                if (dist >= space)
+                {
+                    float flat = m_terrain->GetFlatZoneRadius(pos, dist/2.0f);
+                    if (flat >= dist/2.0f)
+                    {
+                        center = pos;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+
+//! Calculates a free space (ignore height)
+bool CRobotMain::FreeSpace2d(Math::Vector &center, float minRadius, float maxRadius,
+                           float space, CObject *exclu)
+{
+    if (minRadius < maxRadius)  // from internal to external?
+    {
+        for (float radius = minRadius; radius <= maxRadius; radius += space)
+        {
+            float ia = space/radius;
+            for (float angle = 0.0f; angle < Math::PI*2.0f; angle += ia)
+            {
+                Math::Point p;
+                p.x = center.x+radius;
+                p.y = center.z;
+                p = Math::RotatePoint(Math::Point(center.x, center.z), angle, p);
+                Math::Vector pos;
+                pos.x = p.x;
+                pos.z = p.y;
+                pos.y = 0.0f;
+                m_terrain->AdjustToFloor(pos, true);
+                float dist = SearchNearestObject2d(m_objMan.get(), pos, exclu);
                 if (dist >= space)
                 {
                     float flat = m_terrain->GetFlatZoneRadius(pos, dist/2.0f);
